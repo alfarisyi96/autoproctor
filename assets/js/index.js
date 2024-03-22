@@ -100,7 +100,14 @@ async function predictWebcam() {
             drawingUtils.drawConnectors(landmarks, FaceLandmarker.FACE_LANDMARKS_LEFT_IRIS, { color: "#30FF30" });
         }
     }
+
+    const isFaceDetected = isFacePresent(results.faceLandmarks);
+    if (!isFaceDetected) {
+        alert('No face detected. Please ensure your face is visible');
+    }
+
     drawBlendShapes(videoBlendShapes, results.faceBlendshapes);
+
     // Call this function again to keep predicting when the browser is ready.
     if (webcamRunning === true) {
         window.requestAnimationFrame(predictWebcam);
@@ -128,4 +135,9 @@ function drawBlendShapes(el, blendShapes) {
     `;
     });
     el.innerHTML = htmlMaker;
+}
+
+function isFacePresent(detectionResults) {
+    // Check if any faces are detected
+    return detectionResults && detectionResults.length > 0;
 }
