@@ -1,0 +1,32 @@
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Cache-control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>Auto Proctoring</title>
+
+  <link href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css" rel="stylesheet">
+  <script src="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js"></script>
+  <link href="./assets/css/style.css" rel="stylesheet">
+  <script src="http://127.0.0.1:8080/assets/js/indicators.js"></script>
+  <script src="http://127.0.0.1:8080/assets/js/index.js" type="module"></script>
+</head>
+<body>
+  <section id="demos" class="invisible">
+    <div id="liveView" class="videoView">
+      <button id="webcamButton" class="mdc-button mdc-button--raised mb-1">
+        <span class="mdc-button__ripple"></span>
+        <span class="mdc-button__label">START QUIZ</span>
+      </button>
+      <div style="position: relative;">
+        <video id="webcam" style="position: abso" autoplay playsinline></video>
+        <canvas class="output_canvas" id="output_canvas" style="position: absolute; left: 0px; top: 0px;"></canvas>
+      </div>
+    </div>
+    <div class="blend-shapes">
+      <ul class="blend-shapes-list" id="video-blend-shapes"></ul>
+    </div>
+  </section>
+</body>
+</html>
