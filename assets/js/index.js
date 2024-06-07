@@ -22,7 +22,7 @@ async function createFaceLandmarker() {
     },
     outputFaceBlendshapes: true,
     runningMode,
-    numFaces: 1,
+    numFaces: 10,
   });
   demosSection.classList.remove("invisible");
 }
@@ -151,6 +151,21 @@ async function predictWebcam() {
     }
   }
 
+  const isMultipleFacePresent = checkMultipleFacePresent(results.faceLandmarks);
+  if (isMultipleFacePresent) {
+    const creditScoreLog = document.getElementById("credit-score-log");
+    if (
+      creditScoreLog.firstChild &&
+      creditScoreLog.firstChild.innerText !==
+        "Multiple faces detected. Please ensure only one face is visible"
+    ) {
+      const li = document.createElement("li");
+      li.innerText =
+        "Multiple faces detected. Please ensure only one face is visible";
+      creditScoreLog.prepend(li);
+    }
+  }
+
   drawBlendShapes(videoBlendShapes, results.faceBlendshapes);
 
   // Call this function again to keep predicting when the browser is ready.
@@ -201,4 +216,9 @@ function drawBlendShapes(el, blendShapes) {
 function isFacePresent(detectionResults) {
   // Check if any faces are detected
   return detectionResults && detectionResults.length > 0;
+}
+
+function checkMultipleFacePresent(detectionResults) {
+  // Check if any faces are detected
+  return detectionResults && detectionResults.length > 1;
 }
