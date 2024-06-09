@@ -1,13 +1,34 @@
 import vision from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
-const { FaceLandmarker, FilesetResolver, DrawingUtils } = vision;
+const { FaceLandmarker, FilesetResolver, DrawingUtils, ImageEmbedder } = vision;
 const demosSection = document.getElementById("demos");
 const imageBlendShapes = document.getElementById("image-blend-shapes");
 const videoBlendShapes = document.getElementById("video-blend-shapes");
+const creditScoreLog = document.getElementById("credit-score-log");
 let faceLandmarker;
 let runningMode = "IMAGE";
 let enableWebcamButton;
 let webcamRunning = false;
+let imageEmbedder;
 const videoWidth = 480;
+const similarityIndicator = indicators.find(
+  (indicator) => indicator.categoryName === "faceSimilarity"
+);
+
+const createImageEmbedder = async () => {
+  const vision = await FilesetResolver.forVisionTasks(
+    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm"
+  );
+  imageEmbedder = await ImageEmbedder.createFromOptions(vision, {
+    baseOptions: {
+      modelAssetPath: `https://storage.googleapis.com/mediapipe-models/image_embedder/mobilenet_v3_small/float32/1/mobilenet_v3_small.tflite`,
+    },
+    runningMode: runningMode,
+    // quantize: true
+  });
+  demosSection.classList.remove("invisible");
+};
+createImageEmbedder();
+
 // Before we can use HandLandmarker class we must wait for it to finish
 // loading. Machine Learning models can be large and take a moment to
 // get everything needed to run.
@@ -68,6 +89,7 @@ function enableCam(event) {
 }
 let lastVideoTime = -1;
 let results = undefined;
+let uploadImageEmbedderResult;
 const drawingUtils = new DrawingUtils(canvasCtx);
 async function predictWebcam() {
   const radio = video.videoHeight / video.videoWidth;
@@ -87,6 +109,7 @@ async function predictWebcam() {
     lastVideoTime = video.currentTime;
     results = faceLandmarker.detectForVideo(video, startTimeMs);
   }
+
   if (results.faceLandmarks) {
     for (const landmarks of results.faceLandmarks) {
       drawingUtils.drawConnectors(
@@ -139,34 +162,39 @@ async function predictWebcam() {
 
   const isFaceDetected = isFacePresent(results.faceLandmarks);
   if (!isFaceDetected) {
-    const creditScoreLog = document.getElementById("credit-score-log");
     if (
       creditScoreLog.firstChild &&
       creditScoreLog.firstChild.innerText !==
         "No face detected. Please ensure your face is visible"
     ) {
-      const li = document.createElement("li");
-      li.innerText = "No face detected. Please ensure your face is visible";
-      creditScoreLog.prepend(li);
+      addLog("No face detected. Please ensure your face is visible");
     }
   }
 
   const isMultipleFacePresent = checkMultipleFacePresent(results.faceLandmarks);
   if (isMultipleFacePresent) {
-    const creditScoreLog = document.getElementById("credit-score-log");
     if (
       creditScoreLog.firstChild &&
       creditScoreLog.firstChild.innerText !==
         "Multiple faces detected. Please ensure only one face is visible"
     ) {
-      const li = document.createElement("li");
-      li.innerText =
-        "Multiple faces detected. Please ensure only one face is visible";
-      creditScoreLog.prepend(li);
+      addLog("Multiple faces detected. Please ensure only one face is visible");
     }
   }
 
   drawBlendShapes(videoBlendShapes, results.faceBlendshapes);
+
+  // if image mode is initialized, create a new embedder with video runningMode
+
+  await imageEmbedder.setOptions({ runningMode: "VIDEO" });
+  const embedderResult = await imageEmbedder.embedForVideo(video, startTimeMs);
+  if (uploadImageEmbedderResult != null) {
+    const similarity = ImageEmbedder.cosineSimilarity(
+      uploadImageEmbedderResult.embeddings[0],
+      embedderResult.embeddings[0]
+    );
+    displaySimilarity(similarity);
+  }
 
   // Call this function again to keep predicting when the browser is ready.
   if (webcamRunning === true) {
@@ -185,16 +213,11 @@ function drawBlendShapes(el, blendShapes) {
         indicator.categoryName === shape.categoryName &&
         shape.score > indicator.score
       ) {
-        // prepend list to id credit-score-log
-        const creditScoreLog = document.getElementById("credit-score-log");
-
         if (
           creditScoreLog.firstChild &&
           creditScoreLog.firstChild.innerText !== indicator.message
         ) {
-          const li = document.createElement("li");
-          li.innerText = indicator.message;
-          creditScoreLog.prepend(li);
+          addLog(indicator.message);
         }
       }
     });
@@ -221,4 +244,59 @@ function isFacePresent(detectionResults) {
 function checkMultipleFacePresent(detectionResults) {
   // Check if any faces are detected
   return detectionResults && detectionResults.length > 1;
+}
+
+const fileInput = document.getElementById("getFile");
+
+fileInput.addEventListener("change", async (event) => {
+  let reader = new FileReader();
+  const output = document.getElementById("embedded_image");
+  reader.onload = function () {
+    output.src = reader.result;
+    output.classList.remove("hidden");
+    setTimeout(async function () {
+      if (runningMode === "VIDEO") {
+        runningMode = "IMAGE";
+        await imageEmbedder.setOptions({ runningMode: runningMode });
+      }
+      uploadImageEmbedderResult = await imageEmbedder.embed(output);
+    }, 100);
+  };
+  reader.readAsDataURL(event.target.files[0]);
+});
+
+function calculateSimilarity(embedding1, embedding2) {
+  if (!embedding1 || !embedding2) return null;
+  let sum = 0;
+  for (let i = 0; i < embedding1.length; i++) {
+    const diff = embedding1[i] - embedding2[i];
+    sum += diff * diff;
+  }
+  return Math.sqrt(sum);
+}
+
+function displaySimilarity(similarity) {
+  if (similarityIndicator) {
+    if (similarity < similarityIndicator.score) {
+      if (
+        creditScoreLog.firstChild &&
+        creditScoreLog.firstChild.innerText !== similarityIndicator.message
+      ) {
+        addLog(similarityIndicator.message);
+      }
+    } else {
+      if (
+        creditScoreLog.firstChild &&
+        creditScoreLog.firstChild.innerText !== "validate image is completed"
+      ) {
+        addLog("validate image is completed");
+      }
+    }
+  }
+}
+
+function addLog(message) {
+  const li = document.createElement("li");
+  li.innerText = message;
+  creditScoreLog.prepend(li);
 }

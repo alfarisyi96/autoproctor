@@ -31,14 +31,14 @@ body {
   font-family: helvetica, arial, sans-serif;
   margin: 2em;
   color: #3d3d3d;
-  --mdc-theme-primary: #007f8b;
+  --mdc-theme-primary: #0C9488 ;
   --mdc-theme-on-primary: #f1f3f4;
 }
 
 h1 {
   font-style: italic;
   color: #ff6f00;
-  color: #007f8b;
+  color: #0C9488;
 }
 
 h2 {
@@ -94,7 +94,7 @@ footer {
 .detectOnClick p {
   position: absolute;
   padding: 5px;
-  background-color: #007f8b;
+  background-color: #0C9488;
   color: #fff;
   border: 1px dashed rgba(255, 255, 255, 0.7);
   z-index: 2;
@@ -147,7 +147,7 @@ footer {
   display: flex;
   height: 16px;
   align-items: center;
-  background-color: #007f8b;
+  background-color: #0C9488;
 }
 
 .mb-1 {
